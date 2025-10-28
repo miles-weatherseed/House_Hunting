@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 # --- Core functions --------------------------------------------------
 
@@ -189,16 +189,39 @@ else:
 
 # --- Plot --------------------------------------------------------------
 
-fig, ax = plt.subplots()
-ax.plot(df["month"], df["equity_buy"], label="Equity if buying (£)")
-ax.plot(df["month"], df["savings_rent"], label="Savings if renting (£)")
+fig = go.Figure()
+fig.add_trace(
+    go.Scatter(
+        x=df["month"],
+        y=df["equity_buy"],
+        mode="lines",
+        name="Equity if buying (£)",
+        hovertemplate="Month %{x}<br>Net worth £%{y:,.0f}<extra></extra>",
+    )
+)
+fig.add_trace(
+    go.Scatter(
+        x=df["month"],
+        y=df["savings_rent"],
+        mode="lines",
+        name="Savings if renting (£)",
+        hovertemplate="Month %{x}<br>Net worth £%{y:,.0f}<extra></extra>",
+    )
+)
 if breakeven_month:
-    ax.axvline(breakeven_month, linestyle="--", color="grey")
-ax.set_xlabel("Month")
-ax.set_ylabel("Net worth (£)")
-ax.set_title("Buy vs Rent Over Time")
-ax.legend()
-st.pyplot(fig)
+    fig.add_vline(
+        x=breakeven_month,
+        line_width=1,
+        line_dash="dash",
+        line_color="grey",
+    )
+fig.update_layout(
+    title="Buy vs Rent Over Time",
+    xaxis_title="Month",
+    yaxis_title="Net worth (£)",
+    hovermode="x unified",
+)
+st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("Month-by-month breakdown")
 st.dataframe(df)
