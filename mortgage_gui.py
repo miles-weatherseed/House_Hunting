@@ -43,6 +43,7 @@ def simulate(
     rent_pcm,
     invest_return_annual,
     include_stamp_duty=True,
+    include_cgt=True,
 ):
     months = mortgage_years * 12
     stamp_duty = calc_stamp_duty(purchase_price) if include_stamp_duty else 0.0
@@ -54,7 +55,9 @@ def simulate(
 
     monthly_mortgage_rate = mortgage_rate_annual / 12.0
     monthly_house_growth = house_price_growth_annual / 12.0
-    monthly_invest_return = invest_return_annual / 12.0
+    monthly_invest_return = (
+        invest_return_annual / 12.0 * (1 - 0.20 if include_cgt else 1.0)
+    )
 
     month_idx = np.arange(1, months + 1, dtype=int)
     remaining = np.zeros(months + 1)
@@ -134,6 +137,7 @@ with col1:
         st.slider("Mortgage rate (annual %)", 0.0, 10.0, 4.5, 0.1) / 100
     )
     mortgage_years = st.slider("Mortgage length (years)", 5, 40, 20, 1)
+    include_stamp_duty = st.checkbox("Include stamp duty (UK rules)", True)
 
 with col2:
     house_growth = (
@@ -148,7 +152,8 @@ with col2:
     invest_return = (
         st.slider("Investment return (annual %)", 0.0, 15.0, 8.0, 0.5) / 100
     )
-    include_stamp_duty = st.checkbox("Include stamp duty (UK rules)", True)
+    include_cgt = st.checkbox("Include capital gains (20%)", True)
+
 
 df, monthly_payment, borrowed, stamp_duty = simulate(
     purchase_price,
@@ -159,6 +164,7 @@ df, monthly_payment, borrowed, stamp_duty = simulate(
     rent_pcm,
     invest_return,
     include_stamp_duty,
+    include_cgt,
 )
 
 breakeven_month = first_breakeven_month(df)
