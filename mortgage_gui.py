@@ -82,18 +82,32 @@ def simulate(
 
     for m in range(1, months + 1):
         rent_this_month = rent_pcm * (1 + monthly_rent_growth) ** m
+
+        # Renter's savings
         savings[m] = savings[m - 1] * (1 + monthly_invest_return) + (
             m_payment - rent_this_month
         )
+
+        # Mortgage balance
         interest = remaining[m - 1] * monthly_mortgage_rate
         principal_paid = 0.0 if interest_only else m_payment - interest
-        remaining[m] = (
-            remaining[m - 1]
-            if interest_only
-            else max(remaining[m - 1] - principal_paid, 0.0)
-        )
+
+        if interest_only:
+            # Balance stays constant
+            remaining[m] = remaining[m - 1]
+        else:
+            remaining[m] = max(remaining[m - 1] - principal_paid, 0.0)
+
+        # House value
         house_val[m] = purchase_price * (1 + monthly_house_growth) ** m
-        equity_buy[m] = house_val[m] - remaining[m]
+
+        # Equity calculation
+        if interest_only:
+            # Equity = current value – original purchase price
+            equity_buy[m] = house_val[m] - purchase_price
+        else:
+            # Standard definition: value – outstanding mortgage
+            equity_buy[m] = house_val[m] - remaining[m]
 
     df = pd.DataFrame(
         {
