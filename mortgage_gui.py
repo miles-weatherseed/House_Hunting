@@ -44,16 +44,20 @@ def simulate(
     invest_return_annual,
     include_stamp_duty=True,
     include_cgt=True,
+    interest_only=False,
 ):
     months = mortgage_years * 12
     stamp_duty = calc_stamp_duty(purchase_price) if include_stamp_duty else 0.0
 
     borrowed = purchase_price - deposit
-    m_payment = mortgage_monthly_payment(
-        borrowed, mortgage_rate_annual, mortgage_years
-    )
-
     monthly_mortgage_rate = mortgage_rate_annual / 12.0
+    m_payment = (
+        borrowed * monthly_mortgage_rate
+        if interest_only
+        else mortgage_monthly_payment(
+            borrowed, mortgage_rate_annual, mortgage_years
+        )
+    )
     monthly_house_growth = house_price_growth_annual / 12.0
     monthly_invest_return = (
         invest_return_annual / 12.0 * (1 - 0.20 if include_cgt else 1.0)
@@ -88,8 +92,12 @@ def simulate(
             m_payment - rent_pcm * (1 + rent_growth / 12) ** m
         )
         interest = remaining[m - 1] * monthly_mortgage_rate
-        principal_paid = m_payment - interest
-        remaining[m] = max(remaining[m - 1] - principal_paid, 0.0)
+        principal_paid = 0.0 if interest_only else m_payment - interest
+        remaining[m] = (
+            remaining[m - 1]
+            if interest_only
+            else max(remaining[m - 1] - principal_paid, 0.0)
+        )
         house_val[m] = purchase_price * (1 + monthly_house_growth) ** m
         equity_buy[m] = house_val[m] - remaining[m]
 
@@ -138,6 +146,13 @@ with col1:
     )
     mortgage_years = st.slider("Mortgage length (years)", 5, 40, 20, 1)
     include_stamp_duty = st.checkbox("Include stamp duty (UK rules)", True)
+    mortgage_type = st.radio(
+        "Mortgage type",
+        options=["Repayment", "Interest-only"],
+        index=0,
+        help="Interest-only keeps the balance outstanding until the end of the term.",
+    )
+    interest_only = mortgage_type == "Interest-only"
 
 with col2:
     house_growth = (
@@ -165,6 +180,7 @@ df, monthly_payment, borrowed, stamp_duty = simulate(
     invest_return,
     include_stamp_duty,
     include_cgt,
+    interest_only,
 )
 
 breakeven_month = first_breakeven_month(df)
