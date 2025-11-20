@@ -41,6 +41,7 @@ def simulate(
     mortgage_years,
     deposit,
     rent_pcm,
+    rent_growth_annual,
     invest_return_annual,
     include_stamp_duty=True,
     include_cgt=True,
@@ -59,6 +60,7 @@ def simulate(
         )
     )
     monthly_house_growth = house_price_growth_annual / 12.0
+    monthly_rent_growth = rent_growth_annual / 12.0
     monthly_invest_return = (
         invest_return_annual / 12.0 * (1 - 0.20 if include_cgt else 1.0)
     )
@@ -72,24 +74,16 @@ def simulate(
 
     house_val[0] = purchase_price
 
-    # Adjust initial capital if stamp duty is included
+    # Renter starts with the cash not used for a deposit/purchase
     initial_investment = (
         deposit + stamp_duty if include_stamp_duty else deposit
     )
-    savings[1] = (
-        m_payment - rent_pcm * (1 + rent_growth / 12)
-    ) + initial_investment
+    savings[0] = initial_investment
 
-    # First month
-    interest_first = borrowed * monthly_mortgage_rate
-    principal_first = m_payment - interest_first
-    remaining[1] = borrowed - principal_first
-    house_val[1] = purchase_price * (1 + monthly_house_growth) ** 1
-    equity_buy[1] = house_val[1] - remaining[1]
-
-    for m in range(2, months + 1):
+    for m in range(1, months + 1):
+        rent_this_month = rent_pcm * (1 + monthly_rent_growth) ** m
         savings[m] = savings[m - 1] * (1 + monthly_invest_return) + (
-            m_payment - rent_pcm * (1 + rent_growth / 12) ** m
+            m_payment - rent_this_month
         )
         interest = remaining[m - 1] * monthly_mortgage_rate
         principal_paid = 0.0 if interest_only else m_payment - interest
@@ -177,6 +171,7 @@ df, monthly_payment, borrowed, stamp_duty = simulate(
     mortgage_years,
     deposit,
     rent_pcm,
+    rent_growth,
     invest_return,
     include_stamp_duty,
     include_cgt,
